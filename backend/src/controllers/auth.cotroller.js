@@ -1,5 +1,6 @@
 const sendVerificationEmail = require("../emailVerify/verifyEmail");
 const User = require("../model/user.model");
+const Session = require("../model/session.model");
 const jwt = require("jsonwebtoken");
 
 const registerUser = async (req, res) => {
@@ -90,9 +91,9 @@ const reverificationEmail = async (req, res) => {
   }
 };
 
-const LoginUser = async (req, res) => {
+const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, firstName } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -104,6 +105,7 @@ const LoginUser = async (req, res) => {
       $or: [{ email }, { firstName }],
     });
 
+    // CHECKING IF USER EXISTS
     if (!existingUser) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -115,6 +117,7 @@ const LoginUser = async (req, res) => {
       return res.status(401).json({ message: "invalid credentials" });
     }
 
+    // CHECKING IF EMAIL IS VERIFIED
     if (!existingUser.isVerified) {
       return res
         .status(401)
@@ -123,7 +126,37 @@ const LoginUser = async (req, res) => {
 
     const accessToken = existingUser.generateToken("7d");
     const refreshToken = existingUser.generateToken("30d");
-  } catch (error) {}
+
+    existingUser.isLoggedIn = true;
+    await existingUser.save();
+
+    // TODO: Implement session management and store refresh token in DB
+    const existingSession = await Session.findOne({ userId: existingUser._id });
+
+    if (existingSession) {
+      await Session.deleteOne({ userId: existingUser._id });
+    }
+
+    // CREATING NEW SESSION
+    await Session.create({
+      userId: existingUser._id,
+    });
+
+    return res.status(200).json({
+      message: `Welcome, ${existingUser.firstName}! You have logged in successfully`,
+      user: existingUser,
+      accessToken,
+      refreshToken,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
-module.exports = { registerUser, verificationEmail, reverificationEmail };
+module.exports = {
+  registerUser,
+  verificationEmail,
+  reverificationEmail,
+  loginUser,
+};
