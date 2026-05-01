@@ -54,7 +54,7 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.methods.generateToken = function () {
+userSchema.methods.generateToken = function (expiry = "1h") {
   return jwt.sign(
     {
       id: this._id,
@@ -62,7 +62,7 @@ userSchema.methods.generateToken = function () {
     },
     process.env.SECRET_KEY,
     {
-      expiresIn: "10m",
+      expiresIn: expiry,
     },
   );
 };

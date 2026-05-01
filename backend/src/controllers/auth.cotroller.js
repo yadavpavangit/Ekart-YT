@@ -90,4 +90,40 @@ const reverificationEmail = async (req, res) => {
   }
 };
 
+const LoginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
+    const existingUser = await User.findOne({
+      $or: [{ email }, { firstName }],
+    });
+
+    if (!existingUser) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // CHECKING PASSWORD
+    const isPasswordValid = await existingUser.comparePassword(password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "invalid credentials" });
+    }
+
+    if (!existingUser.isVerified) {
+      return res
+        .status(401)
+        .json({ message: "Please verify your email before logging in" });
+    }
+
+    const accessToken = existingUser.generateToken("7d");
+    const refreshToken = existingUser.generateToken("30d");
+  } catch (error) {}
+};
+
 module.exports = { registerUser, verificationEmail, reverificationEmail };
