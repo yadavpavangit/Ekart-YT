@@ -154,9 +154,24 @@ const loginUser = async (req, res) => {
   }
 };
 
+const logoutUser = async (req, res) => {
+  try {
+    const userId = req.id;
+
+    await Session.deleteMany({ userId: userId });
+    await User.findByIdAndUpdate(userId, { isLoggedIn: false });
+
+    return res.status(200).json({ message: "Log out successful" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   verificationEmail,
   reverificationEmail,
   loginUser,
+  logoutUser,
 };
